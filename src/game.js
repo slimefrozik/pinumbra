@@ -41,7 +41,7 @@ export class Game {
     this._promptTarget = null;
     this._stepTimer = 0;
     this._roarCd = 0;
-    this._wasHitFlashing = false;
+    this._lastHitCount = 0;
   }
 
   initScene() {
@@ -102,6 +102,7 @@ export class Game {
 
     this.player.reset();
     this.player.inventory.attachments = keepAtts;
+    this._lastHitCount = 0;
     this.currentWeaponId = 'pistol';
     this.time = 0;
     this.world._dayFraction = 0.29; // 7:00am
@@ -264,13 +265,14 @@ export class Game {
     this.hud.updateWeapon(weapon, this.player.ads);
     this.hud.updateVitals(this.lastDamagedBear);
     this.hud.updateNeeds(this.player.needs);
-    if (this.player.isHitFlashing) {
-      this.hud.flashHit();
-      // Edge-detect the "new hit" transition so the hurt SFX plays once per hit
-      // rather than every frame while the hit-flash timer counts down.
-      if (!this._wasHitFlashing) this.audio?.hurt();
+    if (this.player.isHitFlashing) this.hud.flashHit();
+    // Play one hurt SFX per actual new hit. Using the monotonically-increasing
+    // hitCount catches consecutive hits that land while the flash is still
+    // active (common with multiple bears on short attack cooldowns).
+    if (this.player.hitCount !== this._lastHitCount) {
+      this.audio?.hurt();
+      this._lastHitCount = this.player.hitCount;
     }
-    this._wasHitFlashing = this.player.isHitFlashing;
     this.hud.tick(dt);
 
     // --- Death ---
