@@ -41,6 +41,7 @@ export class Game {
     this._promptTarget = null;
     this._stepTimer = 0;
     this._roarCd = 0;
+    this._wasHitFlashing = false;
   }
 
   initScene() {
@@ -265,11 +266,11 @@ export class Game {
     this.hud.updateNeeds(this.player.needs);
     if (this.player.isHitFlashing) {
       this.hud.flashHit();
-      if (this._lastHurtFlash !== this.player._hitFlashTimer) {
-        this.audio?.hurt();
-        this._lastHurtFlash = this.player._hitFlashTimer;
-      }
+      // Edge-detect the "new hit" transition so the hurt SFX plays once per hit
+      // rather than every frame while the hit-flash timer counts down.
+      if (!this._wasHitFlashing) this.audio?.hurt();
     }
+    this._wasHitFlashing = this.player.isHitFlashing;
     this.hud.tick(dt);
 
     // --- Death ---
