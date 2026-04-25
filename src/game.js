@@ -6,6 +6,7 @@ import { Weapon, WeaponViewModel } from './weapons.js';
 import { Bear } from './bears.js';
 import { World } from './world.js';
 import { HUD } from './hud.js';
+import { Audio } from './audio.js';
 import { BEAR, WEAPONS, ATTACHMENTS, PLAYER, WORLD } from './config.js';
 
 export class Game {
@@ -38,6 +39,8 @@ export class Game {
     this.lastDamagedBear = null;
 
     this._promptTarget = null;
+    this._stepTimer = 0;
+    this._roarCd = 0;
   }
 
   initScene() {
@@ -55,7 +58,9 @@ export class Game {
     this.player = new Player(this.camera);
     this.hud = new HUD();
 
+    this.audio = new Audio();
     this.viewModel = new WeaponViewModel(this.camera);
+    this._buildMuzzleFlash();
     this.weapons.pistol = new Weapon('pistol');
     this.weapons.rifle = new Weapon('rifle');
     this.weapons.shotgun = new Weapon('shotgun');
@@ -178,7 +183,12 @@ export class Game {
     }
 
     // --- Reload ---
-    if (this.input.tapped('KeyR')) weapon.startReload();
+    if (this.input.tapped('KeyR')) {
+      if (weapon.reloading <= 0 && weapon.reserve > 0 && weapon.mag < weapon.magCapacity()) {
+        this.audio?.reload();
+      }
+      weapon.startReload();
+    }
     weapon.tick(dt);
 
     // --- Attachment controls ---
@@ -192,7 +202,16 @@ export class Game {
 
     // --- Bears ---
     this.bearRespawnTimer -= dt;
-    for (const b of this.bears) b.tick(dt, this.player, this.world);
+    this._roarCd -= dt;
+    for (const b of this.bears) {
+      const wasAlert = b.state === 'charge' || b.state === 'attack';
+      b.tick(dt, this.player, this.world);
+      if (!wasAlert && (b.state === 'charge' || b.state === 'alert') && this._roarCd <= 0 && b.alive) {
+        this.audio?.roar();
+        this._roarCd = 3.5;
+      }
+    }
+    this._tickFootsteps(dt);
 
     // Remove bears that have been dead for a while
     this.bears = this.bears.filter(b => {
@@ -244,13 +263,25 @@ export class Game {
     this.hud.updateWeapon(weapon, this.player.ads);
     this.hud.updateVitals(this.lastDamagedBear);
     this.hud.updateNeeds(this.player.needs);
-    if (this.player.isHitFlashing) this.hud.flashHit();
+    if (this.player.isHitFlashing) {
+      this.hud.flashHit();
+      if (this._lastHurtFlash !== this.player._hitFlashTimer) {
+        this.audio?.hurt();
+        this._lastHurtFlash = this.player._hitFlashTimer;
+      }
+    }
     this.hud.tick(dt);
 
     // --- Death ---
     if (this.player.dead) {
       this.running = false;
       document.exitPointerLock?.();
+      try {
+        const best = Number(localStorage.getItem('pinumbra_best') || 0);
+        if (this.player.kills > best) {
+          localStorage.setItem('pinumbra_best', String(this.player.kills));
+        }
+      } catch (_e) { /* localStorage may be unavailable */ }
       if (this.onDeath) this.onDeath(this.player.deathReason, this.player.kills);
     }
 
@@ -291,12 +322,16 @@ export class Game {
   _tryFire(weapon) {
     if (weapon.mag <= 0) {
       // Auto-reload on click when dry.
+      this.audio?.empty();
       weapon.startReload();
       return;
     }
     if (!weapon.fire()) return;
 
     const stats = weapon.stats();
+    const suppressed = weapon.attachments.muzzle === 'suppressor';
+    this.audio?.gunshot(weapon.id, suppressed);
+    this._triggerMuzzleFlash();
     const origin = this.player.position.clone();
     const baseDir = new THREE.Vector3(0, 0, -1).applyQuaternion(this.camera.quaternion);
     const pellets = weapon.def.pellets || 1;
@@ -404,6 +439,7 @@ export class Game {
       this._promptTarget = nearest;
       if (this.input.tapped('KeyE')) {
         this._applyLoot(nearest);
+        this.audio?.pickup();
         this.world.consumeLoot(nearest);
         this._promptTarget = null;
         this.hud.hidePrompt();
@@ -475,6 +511,40 @@ export class Game {
 
   _hoursToSeconds(h) {
     return h * WORLD.dayLengthSeconds / 24;
+  }
+
+  _buildMuzzleFlash() {
+    this._flash = new THREE.Mesh(
+      new THREE.SphereGeometry(0.08, 8, 6),
+      new THREE.MeshBasicMaterial({ color: 0xfff2a0, transparent: true, opacity: 0 }),
+    );
+    this._flash.position.set(0.22, -0.14, -0.7);
+    this.camera.add(this._flash);
+    this._flashT = 0;
+  }
+
+  _triggerMuzzleFlash() {
+    this._flashT = 0.06;
+  }
+
+  _tickFootsteps(dt) {
+    if (this._flashT > 0) {
+      this._flashT -= dt;
+      this._flash.material.opacity = Math.max(0, this._flashT / 0.06) * 0.9;
+    }
+    // Footsteps + camera bob when moving on ground.
+    const moving = (this.player.velocity.x * this.player.velocity.x + this.player.velocity.z * this.player.velocity.z) > 1;
+    if (moving && this.player.onGround) {
+      const rate = this.player.sprinting ? 2.8 : this.player.crouching ? 1.4 : 2.0;
+      this._stepTimer += dt * rate;
+      if (this._stepTimer > 1) {
+        this._stepTimer = 0;
+        this.audio?.step();
+      }
+      // Head bob (apply small position delta to camera).
+      const bob = Math.sin(performance.now() * 0.012 * rate) * (this.player.crouching ? 0.015 : 0.035);
+      this.camera.position.y += bob;
+    }
   }
 
   _onResize() {

@@ -20,6 +20,9 @@ function showDeath(reason, kills) {
   hud.classList.add('hidden');
   document.getElementById('death-reason').textContent = reason;
   document.getElementById('death-kills').textContent = String(kills);
+  let best = 0;
+  try { best = Number(localStorage.getItem('pinumbra_best') || 0); } catch (_e) { /* ignore */ }
+  document.getElementById('death-best').textContent = String(Math.max(best, kills));
   deathScreen.classList.remove('hidden');
 }
 
