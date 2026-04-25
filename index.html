@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pinumbra — Polar Bear Hunt</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <canvas id="game"></canvas>
+
+    <div id="hud" class="hidden">
+      <div id="crosshair"></div>
+
+      <div id="top-bar">
+        <div id="compass"><div id="compass-strip"></div></div>
+        <div id="kill-counter">
+          <span class="label">BEARS</span>
+          <span id="kill-count">0</span>
+        </div>
+        <div id="clock">
+          <span class="label">DAY</span>
+          <span id="day-count">1</span>
+          <span id="time-of-day">06:00</span>
+        </div>
+      </div>
+
+      <div id="left-panel">
+        <div class="panel-title">VITALS</div>
+        <div id="organs">
+          <div class="organ" data-organ="brain"><span>Brain</span><div class="bar"><div class="fill"></div></div></div>
+          <div class="organ" data-organ="heart"><span>Heart</span><div class="bar"><div class="fill"></div></div></div>
+          <div class="organ" data-organ="lungs"><span>Lungs</span><div class="bar"><div class="fill"></div></div></div>
+          <div class="organ" data-organ="liver"><span>Liver</span><div class="bar"><div class="fill"></div></div></div>
+          <div class="organ" data-organ="stomach"><span>Stomach</span><div class="bar"><div class="fill"></div></div></div>
+          <div class="organ" data-organ="legs"><span>Legs</span><div class="bar"><div class="fill"></div></div></div>
+        </div>
+      </div>
+
+      <div id="right-panel">
+        <div class="panel-title">NEEDS</div>
+        <div id="needs">
+          <div class="need" data-need="hunger"><span>Hunger</span><div class="bar"><div class="fill"></div></div></div>
+          <div class="need" data-need="thirst"><span>Thirst</span><div class="bar"><div class="fill"></div></div></div>
+          <div class="need" data-need="warmth"><span>Warmth</span><div class="bar"><div class="fill"></div></div></div>
+          <div class="need" data-need="sleep"><span>Rest</span><div class="bar"><div class="fill"></div></div></div>
+          <div class="need" data-need="bladder"><span>Bladder</span><div class="bar"><div class="fill"></div></div></div>
+          <div class="need" data-need="bloodlust"><span>Bloodlust</span><div class="bar"><div class="fill"></div></div></div>
+        </div>
+      </div>
+
+      <div id="bottom-bar">
+        <div id="weapon-info">
+          <div id="weapon-name">—</div>
+          <div id="ammo"><span id="ammo-mag">0</span> / <span id="ammo-reserve">0</span></div>
+          <div id="attachments"></div>
+        </div>
+      </div>
+
+      <div id="prompt" class="hidden">Press E</div>
+      <div id="toast"></div>
+    </div>
+
+    <div id="menu">
+      <div class="menu-card">
+        <h1>PINUMBRA</h1>
+        <p class="subtitle">a polar-bear-hunting survival shooter</p>
+        <p>
+          Hunt white bears across the frozen desert. Manage hunger, thirst, warmth,
+          sleep and your rising bloodlust. Every shot is tracked against eight
+          individual organs — aim well.
+        </p>
+        <button id="start-btn">START HUNT</button>
+        <div class="controls-hint">
+          WASD move · Shift sprint · Space jump · C crouch · LMB fire · RMB aim ·
+          R reload · 1/2/3 weapons · T cycle slot · F toggle attachment · E interact ·
+          G eat · H drink · Z sleep · B relieve
+        </div>
+        <div class="tip">Click the canvas to lock the mouse. Esc to release.</div>
+      </div>
+    </div>
+
+    <div id="death-screen" class="hidden">
+      <div class="menu-card">
+        <h1>YOU DIED</h1>
+        <p id="death-reason">The cold took you.</p>
+        <p>Bears harvested: <span id="death-kills">0</span></p>
+        <button id="respawn-btn">TRY AGAIN</button>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
