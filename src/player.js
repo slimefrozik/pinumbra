@@ -38,6 +38,10 @@ export class Player {
     this.ads = false;
 
     this._hitFlashTimer = 0;
+    // Monotonically increments on each *significant* incoming hit so consumers
+    // can distinguish "a new hit arrived" from "the flash is still counting
+    // down from a previous hit" even when hits stack within the flash window.
+    this.hitCount = 0;
   }
 
   reset() {
@@ -53,6 +57,8 @@ export class Player {
     this.deathReason = '';
     this.sleeping = false;
     this.ads = false;
+    this._hitFlashTimer = 0;
+    this.hitCount = 0;
   }
 
   get eyeHeight() {
@@ -200,7 +206,10 @@ export class Player {
   damage(amount, source = 'bear') {
     if (this.dead) return;
     this.health -= amount;
-    if (amount > 1.5) this._hitFlashTimer = 0.4;
+    if (amount > 1.5) {
+      this._hitFlashTimer = 0.4;
+      this.hitCount += 1;
+    }
     if (this.health <= 0) {
       this.health = 0;
       this.dead = true;
